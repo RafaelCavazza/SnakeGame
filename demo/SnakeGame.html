@@ -1,0 +1,333 @@
+<html>
+	<div id='score'>Placar: 0</div>
+	<div id='nivel'>Nivel: 0</div>
+	<div id='eat'>Comeu: 0</div>
+	<body>
+		<canvas id="canvas" width="400" height="400" style="border:1px solid #000000;">
+		</canvas>
+	</body>
+</html>
+
+<script>
+
+	var timeOut;
+	var lastRun;
+	var board;
+	var endGame;
+	var gameDraw = true;
+	var gameStartVal = false;
+	var pecas;
+	var score;
+	var nivel;
+	var direction;
+	var snakeSize;
+	var canvas;
+	var food = 5;
+
+	bindEvents();
+
+	function gameLoop()
+	{
+		moveSnake();
+		drawGame();
+		if(!endGame)
+			setTimeout(gameLoop,timeOut);
+		else
+			gameLost();
+	}
+
+	function gameLost()
+	{
+
+		var ctx = canvas.getContext("2d");
+		ctx.font = "15px Arial";
+		ctx.fillStyle = "black";
+		ctx.textAlign = "center";
+		ctx.fillText("Voce perdeu. Precione 'Enter' para jogar novamente.", canvas.width/2, canvas.height/2);
+	}
+
+	function drawGame()
+	{
+		for(var i=0;i<20;i++)
+		{
+			for(var k=0;k<20;k++)
+			{
+				if(board[i][k].type=="S")
+				{
+					var ctx = canvas.getContext("2d");
+					if(board[i][k].local=="H")
+						ctx.fillStyle = "#00FF00";
+					else
+						ctx.fillStyle = "#0000FF";
+					ctx.fillRect(20*i,20*k,19,19);
+				}
+				else if(board[i][k].type=="F")
+				{
+					var ctx = canvas.getContext("2d");
+					ctx.fillStyle = "#FF0000";
+					ctx.fillRect(20*i,20*k,19,19);
+				}
+				else
+				{
+					var ctx = canvas.getContext("2d");
+					ctx.fillStyle = "#FFFFFF";
+					ctx.fillRect(20*i,20*k,19,19);
+				}
+			}
+		}
+		gameDraw = true;
+	}
+
+	function moveSnake()
+	{	
+		var col = checkColision();
+		if(col.colision)
+		{
+			endGame = true;
+			return;
+		}
+
+		var head = findPart("H");
+		var x = head.x;
+		var y = head.y;
+
+		if (direction == 'UP') { 
+			head.y--;
+		}
+		else if (direction == 'DOWN') {
+		    head.y++;
+		}
+		else if (direction == 'LEFT') {
+			head.x--;
+		}
+		else if (direction == 'RIGTH') {
+			head.x++;
+		}
+		board[head.x][head.y] = { "type" : "S", "local":"H", "seq": (board[x][y].seq+1) };
+		board[x][y].local="B";
+
+		if(col.food)
+		{
+			food +=1;
+		}
+
+		if(food<1)
+		{
+			setTail();
+		}
+		else
+		{
+			food--;
+		}
+	}
+
+	function initSnake()
+	{
+		var x=0;
+		var y=0;
+
+		while(x<snakeSize || x>10)
+			x = parseInt(Math.random()*19);
+		y = parseInt(Math.random()*19);
+
+		for(var i=0; i<snakeSize;i++)
+		{
+			var obj = {};
+			obj.type = "S";
+			obj.local = "";
+			obj.seq = x-i;
+			if(i==0)
+			{
+				obj.local = "H";
+			}
+			else if(i==snakeSize-1)
+			{
+				obj.local = "T";
+			}	
+			else
+			{
+				obj.local = "B";
+			}
+			board[x-i][y] = obj;
+		}
+	}
+
+	function initFood()
+	{
+		var x=0;
+		var y=0;
+		var loop = true;
+		while(loop)
+		{
+			x = parseInt(Math.random()*19);
+			y = parseInt(Math.random()*19);
+			loop = (board[x][y].type=="S" || board[x][y].type=="F") ? true : false;
+		}
+		
+		var obj = {};
+		obj.type = "F";
+		obj.local = "";
+		board[x][y] = obj;
+	}
+
+
+	function bindEvents()
+	{
+		function checkKey(e) {
+
+		    e = e || window.event;
+		    if(gameDraw==false && e.keyCode !=13)
+		    	return;
+
+		    gameDraw = false;
+		    if (e.keyCode == '38') {
+		    	if(direction!="DOWN")	
+			        direction="UP";
+		    }
+		    else if (e.keyCode == '40') {
+		    	if(direction!="UP")
+		        	direction="DOWN";
+		    }
+		    else if (e.keyCode == '37') {
+		    	if(direction!="RIGTH")	
+		       		direction="LEFT";
+		    }
+		    else if (e.keyCode == '39') {
+		    	if (!gameStartVal) {
+		    		gameStart();
+		    		gameStartVal=true;
+		    	};
+		    	if(direction!="LEFT")
+			        direction="RIGTH";
+		    }
+		    else if (e.keyCode == '13') {
+		    	if(endGame)
+		    		gameStart();
+		    	
+		    }		   
+		}
+		document.onkeydown = checkKey;
+	}
+
+	function initBoard()
+	{
+		var ctx1 = canvas.getContext("2d");
+		ctx1.fillStyle = "#FFFFFF";
+		ctx1.fillRect(0,0,canvas.width,canvas.height);
+
+		for(var i=0;i<board.length;i++)
+			for(var k=0;k<board.length;k++)
+				board[i][k] = { "type" : "", "local":"", "seq":0 };
+	}
+
+	function checkColision()
+	{
+		var head = findPart("H");
+		var ret = {};
+		ret.food = false;
+		if (direction == 'UP') { 
+			head.y--;
+		}
+		else if (direction == 'DOWN') {
+		    head.y++;
+		}
+		else if (direction == 'LEFT') {
+			head.x--;
+		}
+		else if (direction == 'RIGTH') {
+			head.x++;
+		}
+		
+		if(head.y<0 || head.y>19 || head.x<0 || head.x>19)
+		{
+			ret.colision = true;
+			endGame = true;
+		}
+		else if(board[head.x][head.y].type=="S")
+		{
+			ret.colision = true;
+			endGame = true;
+		}
+		else if(board[head.x][head.y].type=="F")
+		{
+			ret.colision = false;
+			ret.food = true;
+			initFood();
+			levelUp();
+		}
+		else
+		{
+			ret.colision = false;
+			ret.food = false;
+		}
+		return ret;
+	}
+
+	function findPart(part)
+	{
+		for(var i=0;i<board.length;i++)
+			for(var k=0;k<board.length;k++)
+				if(board[i][k].local==part)
+					return { "x" : i, "y" : k};
+	}
+
+	function setTail()
+	{
+		var tail = findPart("T");
+		board[tail.x][tail.y].local="";
+		board[tail.x][tail.y].type="";
+		var _sq = board[tail.x][tail.y].seq+1;
+		board[tail.x][tail.y].seq=0;
+		var newTail = findSeq(_sq);
+		board[newTail.x][newTail.y].local="T";
+		board[newTail.x][newTail.y],type = "S";
+	}
+
+	function findSeq(seq)
+	{
+		for(var i=0;i<board.length;i++)
+			for(var k=0;k<board.length;k++)
+				if(board[i][k].seq==seq)
+					return { "x" : i, "y" : k };
+	}
+
+	function levelUp()
+	{
+		pecas++;
+		document.getElementById("eat").innerHTML="Comeu: " + (pecas);
+		if(pecas%(5)==0)
+		{
+			nivel++;
+			document.getElementById("nivel").innerHTML="Nivel: " + (nivel);
+			timeOut = parseInt(timeOut*0.90);
+		}
+		score += nivel ;
+		document.getElementById("score").innerHTML="Placar: " + (score);
+	}
+
+	function gameStart()
+	{
+		timeOut = 150;
+		lastRun = (new Date).getTime();
+		board = new Array(20);
+		endGame = false;
+		gameDraw = true;
+		gameStartVal = true;
+		pecas = 0;
+		score = 0;
+		nivel = 1;
+		for (var i = 0; i < 20; i++) {
+			  board[i] = new Array(20);
+		}
+
+		direction = "RIGTH";
+		snakeSize = 2;
+		canvas = document.getElementById("canvas");
+		
+		initBoard();
+		initSnake();
+		initFood();
+		drawGame();
+		gameLoop();
+	}
+</script>
